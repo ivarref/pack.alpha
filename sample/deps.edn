@@ -1,0 +1,20 @@
+{:deps      {org.clojure/clojure                             {:mvn/version "1.10.1"}
+             io.pedestal/pedestal.service                    {:mvn/version "0.5.7"}
+             io.pedestal/pedestal.jetty                      {:mvn/version "0.5.7"}
+             com.walmartlabs/lacinia-pedestal                {:mvn/version "0.12.0"}
+             com.walmartlabs/lacinia                         {:mvn/version "0.33.0"}}
+
+ :paths     ["src" "resources"]
+
+ :aliases   {:build {:extra-paths ["build"]
+                     :extra-deps  {badigeon/badigeon {:git/url "https://github.com/EwenG/badigeon.git"
+                                                      :sha "c7588e6d2c66284dcda1a339adcba8cb9c74a8b0"
+                                                      :tag "0.0.9"}}
+                     :main-opts   ["-m" "package"]}
+             :pack  {:extra-deps {pack/pack.alpha {:local/root "../."}}
+                     :main-opts  ["-m" "mach.pack.alpha.jib"
+                                  "--quiet"
+                                  "--image-type" "docker"
+                                  "--base-image" "openjdk:11.0.2-slim"
+                                  "--image-name" "demo:pack"
+                                  "-m" "myapp.core"]}}}

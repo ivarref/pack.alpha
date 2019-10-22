@@ -66,51 +66,51 @@
 (defn jib [{::tools-deps/keys [paths lib-map]} {:keys [image-name image-type tar-file base-image target-dir include additional-tags labels user to-registry-username to-registry-password from-registry-username from-registry-password quiet verbose main]}]
   (when-not quiet
     (println "Building" image-name))
-  (let [lib-jars-layer (reduce (fn [acc {:keys [path] :as all}]
-                                 (let [container-path (AbsoluteUnixPath/get (str target-dir
-                                                                                 "/"
-                                                                                 (elodin/versioned-lib all)
-                                                                                 ".jar"))]
-                                   (-> acc
-                                       (update :builder #(.addEntry %
-                                                                    (Paths/get path string-array)
-                                                                    container-path))
-                                       (update :container-paths conj container-path))))
-                               {:builder (-> (LayerConfiguration/builder)
-                                             (.setName "library jars"))
-                                :container-paths nil}
-                               (lib-map/lib-jars lib-map))
-        lib-dirs-layer (reduce (fn [acc {:keys [path] :as all}]
-                                 (let [container-path (AbsoluteUnixPath/get (str target-dir
-                                                                                 "/"
-                                                                                 (elodin/versioned-lib all)
-                                                                                 "-"
-                                                                                 (elodin/directory-unique all)))]
-                                   (-> acc
-                                       (update :builder #(.addEntryRecursive %
-                                                                             (Paths/get path string-array)
-                                                                             container-path))
-                                       (update :container-paths conj container-path))))
-                               {:builder (-> (LayerConfiguration/builder)
-                                             (.setName "library directories"))
-                                :container-paths nil}
-                               (lib-map/lib-dirs lib-map))
-        project-dirs-layer (reduce (fn [acc project-path]
-                                     (let [path (Paths/get project-path string-array)]
-                                       (if (Files/exists path (into-array LinkOption []))
-                                         (let [container-path (AbsoluteUnixPath/get (str target-dir
-                                                                                         "/"
-                                                                                         (unique-base-path path)))]
-                                           (-> acc
-                                               (update :builder #(.addEntryRecursive %
-                                                                                     path
-                                                                                     container-path))
-                                               (update :container-paths conj container-path)))
-                                         acc)))
+  (let [#_lib-jars-layer #_(reduce (fn [acc {:keys [path] :as all}]
+                                     (let [container-path (AbsoluteUnixPath/get (str target-dir
+                                                                                     "/"
+                                                                                     (elodin/versioned-lib all)
+                                                                                     ".jar"))]
+                                       (-> acc
+                                           (update :builder #(.addEntry %
+                                                                        (Paths/get path string-array)
+                                                                        container-path))
+                                           (update :container-paths conj container-path))))
                                    {:builder (-> (LayerConfiguration/builder)
-                                                 (.setName "project directories"))
+                                                 (.setName "library jars"))
                                     :container-paths nil}
-                                   paths)
+                                   (lib-map/lib-jars lib-map))
+        #_lib-dirs-layer #_(reduce (fn [acc {:keys [path] :as all}]
+                                     (let [container-path (AbsoluteUnixPath/get (str target-dir
+                                                                                     "/"
+                                                                                     (elodin/versioned-lib all)
+                                                                                     "-"
+                                                                                     (elodin/directory-unique all)))]
+                                       (-> acc
+                                           (update :builder #(.addEntryRecursive %
+                                                                                 (Paths/get path string-array)
+                                                                                 container-path))
+                                           (update :container-paths conj container-path))))
+                                   {:builder (-> (LayerConfiguration/builder)
+                                                 (.setName "library directories"))
+                                    :container-paths nil}
+                                   (lib-map/lib-dirs lib-map))
+        #_project-dirs-layer #_(reduce (fn [acc project-path]
+                                         (let [path (Paths/get project-path string-array)]
+                                           (if (Files/exists path (into-array LinkOption []))
+                                             (let [container-path (AbsoluteUnixPath/get (str target-dir
+                                                                                             "/"
+                                                                                             (unique-base-path path)))]
+                                               (-> acc
+                                                   (update :builder #(.addEntryRecursive %
+                                                                                         path
+                                                                                         container-path))
+                                                   (update :container-paths conj container-path)))
+                                             acc)))
+                                       {:builder (-> (LayerConfiguration/builder)
+                                                     (.setName "project directories"))
+                                        :container-paths nil}
+                                       paths)
         base-image-with-creds (-> (RegistryImage/named ^String base-image)
                                   (.addCredentialRetriever (or
                                                              (explicit-credentials from-registry-username from-registry-password)
@@ -122,17 +122,12 @@
           (seq labels) (add-labels labels)
           user (.setUser user))
         (.setCreationTime (Instant/now))
-        (.addLayer (-> lib-jars-layer :builder (.build)))
-        (.addLayer (-> lib-dirs-layer :builder (.build)))
-        (.addLayer (-> project-dirs-layer :builder (.build)))
+        (.addLayer (-> (LayerConfiguration/builder)
+                       (.setName "target directory")
+                       (.addEntryRecursive (Paths/get "target" string-array) (AbsoluteUnixPath/get target-dir))
+                       (.build)))
         (.setWorkingDirectory (AbsoluteUnixPath/get target-dir))
-        (.setEntrypoint (into-array String ["java"
-                                            "-Dclojure.main.report=stderr"
-                                            "-Dfile.encoding=UTF-8"
-                                            "-cp" (str/join ":" (map str (mapcat :container-paths [lib-jars-layer
-                                                                                                   lib-dirs-layer
-                                                                                                   project-dirs-layer])))
-                                            "clojure.main" "-m" main]))
+        (.setEntrypoint (into-array String ["java" "-cp" "classes:lib/lib/*" main]))
         (.containerize (cond-> (Containerizer/to (case image-type
                                                    :docker (DockerDaemonImage/named image-name)
                                                    :tar (-> (TarImage/named image-name)
