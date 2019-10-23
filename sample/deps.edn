@@ -1,10 +1,7 @@
-{:deps      {org.clojure/clojure                             {:mvn/version "1.10.1"}
-             io.pedestal/pedestal.service                    {:mvn/version "0.5.7"}
-             io.pedestal/pedestal.jetty                      {:mvn/version "0.5.7"}
-             com.walmartlabs/lacinia-pedestal                {:mvn/version "0.12.0"}
-             com.walmartlabs/lacinia                         {:mvn/version "0.33.0"}}
+{:deps    {org.clojure/clojure {:mvn/version "1.10.1"}
+           ivarref/aot-debug   {:mvn/version "0.1.0"}}
 
- :paths     ["src" "resources"]
+ :paths   ["src"]
 
  :aliases   {:build {:extra-paths ["build"]
                      :extra-deps  {badigeon/badigeon {:git/url "https://github.com/EwenG/badigeon.git"
