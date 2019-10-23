@@ -123,11 +123,18 @@
           user (.setUser user))
         (.setCreationTime (Instant/now))
         (.addLayer (-> (LayerConfiguration/builder)
-                       (.setName "target directory")
-                       (.addEntryRecursive (Paths/get "target" string-array) (AbsoluteUnixPath/get target-dir))
+                       (.setName "target/lib/lib")
+                       (.addEntryRecursive (Paths/get "target/lib/lib" string-array) (AbsoluteUnixPath/get "/app/lib"))
+                       (.build)))
+        (.addLayer (-> (LayerConfiguration/builder)
+                       (.setName "target/classes")
+                       (.addEntryRecursive (Paths/get "target/classes" string-array) (AbsoluteUnixPath/get "/app/classes"))
                        (.build)))
         (.setWorkingDirectory (AbsoluteUnixPath/get target-dir))
-        (.setEntrypoint (into-array String ["java" "-cp" "classes:lib/lib/*" main]))
+        (.setEntrypoint (into-array String ["java"
+                                            "-cp"
+                                            "classes:lib/*"
+                                            main]))
         (.containerize (cond-> (Containerizer/to (case image-type
                                                    :docker (DockerDaemonImage/named image-name)
                                                    :tar (-> (TarImage/named image-name)
