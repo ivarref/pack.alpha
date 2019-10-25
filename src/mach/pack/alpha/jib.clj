@@ -18,7 +18,7 @@
                                            CredentialRetriever)
            (com.google.cloud.tools.jib.frontend CredentialRetrieverFactory)
            (com.google.cloud.tools.jib.event.events ProgressEvent TimerEvent)
-           (java.util.function Consumer)
+           (java.util.function Consumer BiFunction)
            (java.util Optional)
            (java.time Instant)))
 
@@ -124,11 +124,20 @@
         (.setCreationTime (Instant/now))
         (.addLayer (-> (LayerConfiguration/builder)
                        (.setName "target/lib/lib")
-                       (.addEntryRecursive (Paths/get "target/lib/lib" string-array) (AbsoluteUnixPath/get "/app/lib"))
+                       (.addEntryRecursive (Paths/get "target/lib/lib" string-array)
+                                           (AbsoluteUnixPath/get "/app/lib")
+                                           LayerConfiguration/DEFAULT_FILE_PERMISSIONS_PROVIDER
+                                           (reify BiFunction
+                                             (apply [this source-path destination-path]
+                                               (Instant/ofEpochSecond 1000 #_(int (/ (.lastModified ^File (.toFile source-path)) 1000))))))
                        (.build)))
         (.addLayer (-> (LayerConfiguration/builder)
                        (.setName "target/classes")
-                       (.addEntryRecursive (Paths/get "target/classes" string-array) (AbsoluteUnixPath/get "/app/classes"))
+                       (.addEntryRecursive (Paths/get "target/classes" string-array) (AbsoluteUnixPath/get "/app/classes")
+                                           LayerConfiguration/DEFAULT_FILE_PERMISSIONS_PROVIDER
+                                           (reify BiFunction
+                                             (apply [this source-path destination-path]
+                                               (Instant/ofEpochSecond 8589934591))))
                        (.build)))
         (.setWorkingDirectory (AbsoluteUnixPath/get target-dir))
         (.setEntrypoint (into-array String ["java"
